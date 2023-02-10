@@ -35,6 +35,11 @@ echo "Exiting/interrupting this script (ctrl-c) may behave unexpectedly since it
 
 project_name="AutoFIT"
 env_name="autofit"
+python_version=3.10
+
+conda_forge_deps="" #pyinquirer not working through conda
+generic_conda_deps="" #pyyaml not needed
+pip_deps="InquirerPy"
 
 # ensure script run from root of repository
 if [ ! -f "setup.py" ]; then
@@ -96,7 +101,7 @@ fi
 
 if ! conda env list | grep -q $env_name; then
   echo "Creating conda environment "\`$env_name\`""
-  conda create -n $env_name python=3.11
+  conda create -n $env_name
   if conda env list | grep -q $env_name; then
     echo "conda environment "\`$env_name\`" created"
   else
@@ -143,57 +148,75 @@ echo -e "\nInstalling dependencies\n"
 #   conda install pytorch torchvision cpuonly -c pytorch
 # fi
 
-# echo -e "\nInstalling other python dependencies"
-# echo -e "\t++  conda install click Sphinx coverage flake8 \"python-dotenv>=0.5.1\" tqdm pyyaml numpy pandas seaborn matplotlib scipy scikit-learn h5py tensorboard"
-# conda install click Sphinx coverage flake8 "python-dotenv>=0.5.1" tqdm pyyaml numpy pandas seaborn matplotlib scipy scikit-learn h5py tensorboard
+if conda list python | grep -q $python_version; then
+  echo "Python already installed at version $python_version"
+else
+  echo "Installing Python $python_version"
+  echo -e "\t++  conda install python=$python_version"
+  conda install python=$python_version
+fi
 
-# echo -e "\nInstalling OpenCV via pip (using conda causes dependency conflicts)"
-# if ! command -v pip | grep -q "envs/$env_name"; then
-#   echo -e "\tpip not running from conda environment, exiting..."
-#   return
-# fi
-# echo -e "\t++  pip install opencv-python"
-# pip install opencv-python
+if [ ! -z $conda_forge_deps ]; then
+  echo -e "\nInstalling main python dependencies"
+  echo -e "\t++  conda install -c conda-forge $conda_forge_deps"
+  conda install -c conda-forge $conda_forge_deps
+fi
+
+if [ ! -z $generic_conda_deps ]; then
+  echo -e "\nInstalling other python dependencies"
+  echo -e "\t++  conda install $generic_conda_deps"
+  conda install $generic_conda_deps
+fi
+
+if [ ! -z $pip_deps ]; then
+  echo -e "\nInstalling remaining dependencies via pip (using conda causes dependency conflicts)"
+  if ! command -v pip | grep -q "envs/$env_name"; then
+    echo -e "\tpip not running from conda environment, exiting..."
+    return
+  fi
+  echo -e "\t++  pip install $pip_deps"
+  pip install $pip_deps
+fi
 
 echo -e "\nInstalling local directory as module via pip"
 echo -e "\t++  pip install -e ."
 pip install -e .
 
-echo -e "\nInstalling jupyter notebook"
-echo -e "\nInstalling jupyter tools / extensions"
-use_jupyter=0
-while true; do
-    read -p "Do you plan to use jupyter notebooks ([y]/n)? " yn
-    case $yn in
-        "" | [Yy]* ) use_jupyter=1; break;;
-        [Nn]* ) break;;
-        * ) echo "Please answer yes or no.";;
-    esac
-done
+# echo -e "\nInstalling jupyter notebook"
+# echo -e "\nInstalling jupyter tools / extensions"
+# use_jupyter=0
+# while true; do
+#     read -p "Do you plan to use jupyter notebooks ([y]/n)? " yn
+#     case $yn in
+#         "" | [Yy]* ) use_jupyter=1; break;;
+#         [Nn]* ) break;;
+#         * ) echo "Please answer yes or no.";;
+#     esac
+# done
 
-if [ $use_jupyter -eq 1 ]; then
-  use_vscode_jupyter=0
-  while true; do
-      read -p "Do you plan to use the ipynb support within VSCode ([y]/n)? " yn
-      case $yn in
-          "" | [Yy]* ) use_vscode_jupyter=1; break;;
-          [Nn]* ) break;;
-          * ) echo "Please answer yes or no.";;
-      esac
-  done
+# if [ $use_jupyter -eq 1 ]; then
+#   use_vscode_jupyter=0
+#   while true; do
+#       read -p "Do you plan to use the ipynb support within VSCode ([y]/n)? " yn
+#       case $yn in
+#           "" | [Yy]* ) use_vscode_jupyter=1; break;;
+#           [Nn]* ) break;;
+#           * ) echo "Please answer yes or no.";;
+#       esac
+#   done
 
-  if [ $use_vscode_jupyter -eq 0 ]; then
-    echo -e "\nInstalling jupyter into conda environment"
-    echo -e "\t++  conda install -c anaconda jupyter"
-    conda install -c anaconda jupyter
-  fi
+#   if [ $use_vscode_jupyter -eq 0 ]; then
+#     echo -e "\nInstalling jupyter into conda environment"
+#     echo -e "\t++  conda install -c anaconda jupyter"
+#     conda install -c anaconda jupyter
+#   fi
 
-  echo -e "\nInstalling jupyter extensions"
-  echo -e "\t++  conda install -n $env_name ipykernel --update-deps"
-  conda install -n $env_name ipykernel --update-deps
-  echo -e "\t++  conda install -c conda-forge ipympl"
-  conda install -c conda-forge ipympl
-fi
+#   echo -e "\nInstalling jupyter extensions"
+#   echo -e "\t++  conda install -n $env_name ipykernel --update-deps"
+#   conda install -n $env_name ipykernel --update-deps
+#   echo -e "\t++  conda install -c conda-forge ipympl"
+#   conda install -c conda-forge ipympl
+# fi
 
 echo -e "\n\nDone setting up $project_name environment!\n"
 
