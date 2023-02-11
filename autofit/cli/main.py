@@ -3,6 +3,7 @@ from autofit.utils.config import *
 ASSERT_BEING_RUN(__name__, __file__, "This file should not be imported. It runs the AutoFIT CLI")
 from autofit.cli.question_set import QuestionSet
 from autofit.cli.create_profile import CreateProfileCLI
+from autofit.cli.edit_profile import EditProfileCLI
 from autofit.profiles.profile import Profile
 
 from InquirerPy import prompt, inquirer
@@ -30,12 +31,15 @@ class BaseQuestionSet(QuestionSet):
       case 0:
         pass
       case 1:
-        choices.append(Choice('switch_profile', name=f"Switch profile ({[*loadable_profiles.keys()][0]})"))
+        choices.append(Choice('switch_profile', name=f"{'Switch' if self.curr_profile else 'Load'} profile ({[*loadable_profiles.keys()][0]})"))
       case _:
         choices.append(Choice('load_profile', name=f"Load profile (available: {', '.join(loadable_profiles.keys())})"))
     
     choices.append(Choice('create_profile', name='Create profile'))
     
+    if self.available_profiles:
+      choices.append(Choice('delete_profile', name=f"Delete profile (available: {', '.join(self.available_profiles.keys())})"))
+
     choices.append(Choice('exit', name='Exit AutoFIT'))
     
     
@@ -69,21 +73,33 @@ class BaseQuestionSet(QuestionSet):
             continue
           self.available_profiles[new_profile.on_disk_name] = new_profile
           self.use_profile(new_profile.on_disk_name)
+          break
       case 'switch_profile':
         loadable_profiles = self.get_loadable_profiles()
-        profile_name = [*loadable_profiles.keys()][0]
-        self.use_profile(profile_name)
+        profile_disk_name = [*loadable_profiles.keys()][0]
+        self.use_profile(profile_disk_name)
       case 'load_profile':
         loadable_profiles = self.get_loadable_profiles()
-        profile_name = inquirer.select(
+        profile_disk_name = inquirer.select(
           message='Select a profile to load',
           choices=[*loadable_profiles, Choice('cancel', name='Cancel / Go back')]
         ).execute()
-        if profile_name == 'cancel':
+        if profile_disk_name == 'cancel':
           return
-        self.use_profile(profile_name)
+        self.use_profile(profile_disk_name)
       case 'edit_profile':
-        print(self.curr_profile, self.curr_profile.name, self.curr_profile.on_disk_name)
+        EditProfileCLI(self.curr_profile).execute()
+      case 'delete_profile':
+        profile_disk_name = inquirer.select(
+          message='Select a profile to delete',
+          choices=[*self.available_profiles.keys(), Choice('cancel', name='Cancel / Go back')]
+        ).execute()
+        if profile_disk_name == 'cancel':
+          return
+        Profile.delete_profile(profile_disk_name)
+        if self.curr_profile is not None and self.curr_profile.on_disk_name == profile_disk_name:
+          self.curr_profile = None
+        del self.available_profiles[profile_disk_name]
       case _:
         raise Exception(f"Unkown choice made!! {choice}")
 
