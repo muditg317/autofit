@@ -37,6 +37,13 @@ class Profile:
     self.items[name] = item
     print('Done!')
 
+  def delete_item(self, name:str) -> None:
+    if name not in self.items:
+      raise ValueError(f'Item {name} does not exist in profile {self.name}')
+    print(f'Deleting item {name} from profile {self.name}...')
+    del self.items[name]
+    print('Done!')
+
   @staticmethod
   def is_valid_profile_name(profile_name: str) -> None:
     return re.match(r'^[a-zA-Z0-9 _-]+$', profile_name)

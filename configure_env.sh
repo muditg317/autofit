@@ -37,9 +37,10 @@ project_name="AutoFIT"
 env_name="autofit"
 python_version=3.10
 
-conda_forge_deps="" #pyinquirer not working through conda
+conda_forge_deps="numpy" #pyinquirer not working through conda
+anaconda_deps="scikit-learn"
 generic_conda_deps="" #pyyaml not needed
-pip_deps="InquirerPy"
+pip_deps="InquirerPy opencv-python"
 
 # ensure script run from root of repository
 if [ ! -f "setup.py" ]; then
@@ -70,8 +71,8 @@ fi
 # create conda environment
 echo -e "\nConfiguring conda environment...\n"
 
-
-if conda env list | grep -q $env_name; then
+# check if conda environment already exists and isn't the active environment (has * in `conda env list` output)
+if conda env list | grep -v \* | grep -q $env_name; then
   while conda env list | grep -q $env_name; do
     echo -e "conda environment "\`$env_name\`" already exists..."
 
@@ -111,8 +112,12 @@ if ! conda env list | grep -q $env_name; then
 fi
 
 # activate conda environment
-echo -e "\nActivating conda environment "\`$env_name\`""
-conda activate $env_name
+if conda env list | grep -q \* | grep -q $env_name; then
+  echo -e "\nconda environment "\`$env_name\`" already active"
+else
+  echo -e "\nActivating conda environment "\`$env_name\`""
+  conda activate $env_name
+fi
 
 # install dependencies
 echo -e "\nInstalling dependencies\n"
@@ -156,19 +161,25 @@ else
   conda install python=$python_version
 fi
 
-if [ ! -z $conda_forge_deps ]; then
-  echo -e "\nInstalling main python dependencies"
+if [ ! -z "$conda_forge_deps" ]; then
+  echo -e "\nInstalling conda-forge python dependencies"
   echo -e "\t++  conda install -c conda-forge $conda_forge_deps"
   conda install -c conda-forge $conda_forge_deps
 fi
 
-if [ ! -z $generic_conda_deps ]; then
+if [ ! -z "$anaconda_deps" ]; then
+  echo -e "\nInstalling anaconda python dependencies"
+  echo -e "\t++  conda install -c anaconda $anaconda_deps"
+  conda install -c anaconda $anaconda_deps
+fi
+
+if [ ! -z "$generic_conda_deps" ]; then
   echo -e "\nInstalling other python dependencies"
   echo -e "\t++  conda install $generic_conda_deps"
   conda install $generic_conda_deps
 fi
 
-if [ ! -z $pip_deps ]; then
+if [ ! -z "$pip_deps" ]; then
   echo -e "\nInstalling remaining dependencies via pip (using conda causes dependency conflicts)"
   if ! command -v pip | grep -q "envs/$env_name"; then
     echo -e "\tpip not running from conda environment, exiting..."
